@@ -1,0 +1,5 @@
+BasedOnStyle: GNU
+
+AlignConsecutiveAssignments: true
+AlignConsecutiveMacros: true
+AlignTrailingComments: true
