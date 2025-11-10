@@ -1,0 +1,8 @@
+# build artifacts
+build/
+
+# development environment
+.qtcreator/
+
+# test files
+*.nds
