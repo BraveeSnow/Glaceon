@@ -1,5 +1,5 @@
-#ifndef ROM_H
-#define ROM_H
+#ifndef GLACEON_ROM_H
+#define GLACEON_ROM_H
 
 #include <cstdint>
 #include <optional>
@@ -67,4 +67,4 @@ struct ROMMainHeader
 
 std::optional<ROMMainHeader> readMainHeader (std::string filePath);
 
-#endif // ROM_H
+#endif // GLACEON_ROM_H
