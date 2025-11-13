@@ -1,11 +1,10 @@
 #ifndef GLACEON_ROM_H
 #define GLACEON_ROM_H
 
+#include "types.h"
 #include <cstdint>
 #include <optional>
 #include <string>
-
-typedef unsigned int addr32_t;
 
 #pragma pack(push, 1)
 

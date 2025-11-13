@@ -7,7 +7,7 @@ main (int argc, char *argv[])
 {
   if (argc != 2)
     {
-      std::cout << "USAGE: " << argv[0] << "<ROM_FILE>" << std::endl;
+      std::cout << "USAGE: " << argv[0] << " <ROM_FILE>" << std::endl;
       return 1;
     }
 
