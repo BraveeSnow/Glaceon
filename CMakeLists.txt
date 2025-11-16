@@ -14,8 +14,9 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 
 add_executable(Glaceon
   src/main.cpp
-  src/rom.h src/rom.cpp
   src/arm.h src/arm.cpp
+  src/mmu.h src/mmu.cpp
+  src/rom.h src/rom.cpp
 )
 target_link_libraries(Glaceon PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 

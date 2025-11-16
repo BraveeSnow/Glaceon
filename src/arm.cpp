@@ -2,7 +2,30 @@
 
 #include <cstring>
 
-ARM9CPU::ARM9CPU () {}
+ARM9CPU::ARM9CPU (MMU &mmu) : _mmu (mmu) {}
+
+/*****************************************************************************
+ * ARM9 CPU Program Execution Management                                     *
+ *****************************************************************************/
+
+void
+ARM9CPU::step ()
+{
+  _stepPipeline (_mmu.readByte (_programCounter));
+
+  // step to next byte in memory
+  _programCounter++;
+}
+
+void
+ARM9CPU::jumpToAddress (addr32_t addr)
+{
+  _programCounter = addr;
+}
+
+/*****************************************************************************
+ * ARM9 CPU CPSR State Management                                            *
+ *****************************************************************************/
 
 void
 ARM9CPU::setProgramMode (ARM9ProgramMode mode)
@@ -28,4 +51,10 @@ ARM9CPU::getCPSRState (uint32_t state)
   return static_cast<bool> (_cpsr & state);
 }
 
-ARM9CompatLayer::ARM9CompatLayer () {}
+void
+ARM9CPU::_stepPipeline (uint8_t code)
+{
+  // TODO: implement instruction pipeline
+}
+
+ARM9CompatLayer::ARM9CompatLayer () : _cpu (_mmu) {}
