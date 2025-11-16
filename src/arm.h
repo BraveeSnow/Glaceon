@@ -59,7 +59,7 @@ private:
    */
   struct _bank
   {
-    uint32_t _fiq_registers[5]; // TODO: maybe move this outside of the bank
+    uint32_t _fiqRegisters[5]; // TODO: maybe move this outside of the bank
     uint32_t _stackPointer[5];
     uint32_t _linkRegister[5];
     uint32_t _spsr[5];
