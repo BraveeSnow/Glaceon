@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+find_package(spdlog CONFIG REQUIRED)
 
 add_executable(Glaceon
   src/main.cpp
@@ -18,7 +19,9 @@ add_executable(Glaceon
   src/mmu.h src/mmu.cpp
   src/rom.h src/rom.cpp
 )
-target_link_libraries(Glaceon PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog)
 
 include(GNUInstallDirs)
 install(TARGETS Glaceon

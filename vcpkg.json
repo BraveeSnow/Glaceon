@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    {
+      "name": "qtbase",
+      "version>=": "6.9.0"
+    },
+    "spdlog"
+  ]
+}
