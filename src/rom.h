@@ -3,12 +3,17 @@
 
 #include "types.h"
 #include <cstdint>
+#include <fstream>
 #include <optional>
+#include <span>
 #include <string>
 
-#pragma pack(push, 1)
-
 struct ROMMainHeader
+#ifdef _WIN32
+#pragma pack(push, 1)
+#else
+    __attribute__ ((packed))
+#endif
 {
   char title[0xC];
   char id[0x4];
@@ -62,8 +67,38 @@ struct ROMMainHeader
   // TODO: fill rest of fields when necessary
 };
 
-#pragma pack(pop)
+struct ROMOverlayEntry
+#ifndef _WIN32
+    __attribute__ ((packed))
+#endif
+{
+  uint32_t id;
+  addr32_t ramAddr;
+  uint32_t ramSize;
+  uint32_t bssSize;
+  addr32_t staticInit;
+  addr32_t staticEnd;
+  uint32_t fileId;
+  uint32_t _reserved;
+};
 
-std::optional<ROMMainHeader> readMainHeader (std::string filePath);
+#ifdef _WIN32
+#pragma pack(pop)
+#endif
+
+class GameROM
+{
+public:
+  GameROM (std::string &filePath);
+
+  std::span<ROMOverlayEntry> getArm9Overlays ();
+  std::span<ROMOverlayEntry> getArm7Overlays ();
+
+private:
+  std::ifstream _rom;
+  std::unique_ptr<ROMMainHeader> _mainHeader;
+  std::span<ROMOverlayEntry> _arm9Overlays;
+  std::span<ROMOverlayEntry> _arm7Overlays;
+};
 
 #endif // GLACEON_ROM_H

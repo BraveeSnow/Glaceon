@@ -1,23 +1,74 @@
 #include "rom.h"
 
-#include <fstream>
+#include <vector>
 
-std::optional<ROMMainHeader>
-readMainHeader (std::string filePath)
+namespace
 {
-  std::ifstream rom (filePath, std::ios::binary);
+
+std::unique_ptr<ROMMainHeader>
+readMainHeader (std::ifstream &file)
+{
   ROMMainHeader hdr;
 
-  if (!rom.is_open ())
+  file.seekg (0, std::ios::beg);
+  file.read (reinterpret_cast<char *> (&hdr), sizeof (ROMMainHeader));
+
+  if (file.fail ())
     {
-      return std::nullopt;
+      throw std::exception ();
     }
 
-  rom.read (reinterpret_cast<char *> (&hdr), sizeof (ROMMainHeader));
-  if (rom.fail ())
+  return std::make_unique<ROMMainHeader> (hdr);
+}
+
+std::span<ROMOverlayEntry>
+readOverlayEntries (std::ifstream &file, addr32_t headerOffset,
+                    uint32_t headerSize)
+{
+  std::vector<ROMOverlayEntry> overlays;
+  ROMOverlayEntry rawOverlay;
+
+  if (headerSize == 0)
     {
-      return std::nullopt;
+      return overlays;
     }
 
-  return hdr;
+  file.seekg (headerOffset, std::ios::beg);
+  for (int i = 0; i < headerSize / sizeof (ROMOverlayEntry); i++)
+    {
+      file.read (reinterpret_cast<char *> (&rawOverlay),
+                 sizeof (ROMOverlayEntry));
+    }
+
+  return overlays;
+}
+
+}
+
+GameROM::GameROM (std::string &filePath)
+{
+  _rom = std::ifstream (filePath, std::ios::binary);
+
+  if (!_rom.is_open ())
+    {
+      throw std::exception ();
+    }
+
+  _mainHeader   = readMainHeader (_rom);
+  _arm9Overlays = readOverlayEntries (_rom, _mainHeader->arm9OverlayOffset,
+                                      _mainHeader->arm9OverlaySize);
+  _arm7Overlays = readOverlayEntries (_rom, _mainHeader->arm7OverlayOffset,
+                                      _mainHeader->arm7OverlaySize);
+}
+
+std::span<ROMOverlayEntry>
+GameROM::getArm9Overlays ()
+{
+  return _arm9Overlays;
+}
+
+std::span<ROMOverlayEntry>
+GameROM::getArm7Overlays ()
+{
+  return _arm7Overlays;
 }
