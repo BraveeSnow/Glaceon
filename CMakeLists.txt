@@ -13,9 +13,18 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 find_package(spdlog CONFIG REQUIRED)
 
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_compile_definitions(GLACEON_DEBUG SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
+endif()
+
 add_executable(Glaceon
   src/main.cpp
   src/arm.h src/arm.cpp
+  src/file.h src/file.cpp
   src/mmu.h src/mmu.cpp
   src/rom.h src/rom.cpp
 )

@@ -43,9 +43,9 @@ readOverlayEntries (std::ifstream &file, addr32_t headerOffset,
   return overlays;
 }
 
-}
+} // end namespace
 
-GameROM::GameROM (std::string &filePath)
+GameROM::GameROM (const std::string filePath)
 {
   _rom = std::ifstream (filePath, std::ios::binary);
 
@@ -55,6 +55,7 @@ GameROM::GameROM (std::string &filePath)
     }
 
   _mainHeader   = readMainHeader (_rom);
+  _fnt          = FileNameTable (_rom, _mainHeader->fntOffset);
   _arm9Overlays = readOverlayEntries (_rom, _mainHeader->arm9OverlayOffset,
                                       _mainHeader->arm9OverlaySize);
   _arm7Overlays = readOverlayEntries (_rom, _mainHeader->arm7OverlayOffset,

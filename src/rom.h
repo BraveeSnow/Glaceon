@@ -1,6 +1,7 @@
 #ifndef GLACEON_ROM_H
 #define GLACEON_ROM_H
 
+#include "file.h"
 #include "types.h"
 #include <cstdint>
 #include <fstream>
@@ -89,7 +90,9 @@ struct ROMOverlayEntry
 class GameROM
 {
 public:
-  GameROM (std::string &filePath);
+  GameROM (const std::string filePath);
+
+  FileNameTable getFileNameTable ();
 
   std::span<ROMOverlayEntry> getArm9Overlays ();
   std::span<ROMOverlayEntry> getArm7Overlays ();
@@ -97,6 +100,7 @@ public:
 private:
   std::ifstream _rom;
   std::unique_ptr<ROMMainHeader> _mainHeader;
+  FileNameTable _fnt;
   std::span<ROMOverlayEntry> _arm9Overlays;
   std::span<ROMOverlayEntry> _arm7Overlays;
 };

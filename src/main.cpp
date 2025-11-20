@@ -1,6 +1,8 @@
+#include "file.h"
+#include "rom.h"
 #include <iostream>
 
-#include "rom.h"
+#include <spdlog/spdlog.h>
 
 int
 main (int argc, char *argv[])
@@ -11,6 +13,16 @@ main (int argc, char *argv[])
       return 1;
     }
 
-  std::optional<ROMMainHeader> hdr = readMainHeader (argv[1]);
+  std::shared_ptr<spdlog::logger> logger = spdlog::default_logger ();
+  spdlog::set_default_logger (logger);
+  spdlog::set_pattern ("%l [%s:%#] %v");
+
+#ifdef GLACEON_DEBUG
+  spdlog::set_level (spdlog::level::debug);
+  SPDLOG_DEBUG ("Debug logging enabled");
+#endif
+
+  GameROM rom = GameROM (argv[1]);
+
   return 0;
 }
