@@ -13,6 +13,8 @@
 #include "types.h"
 #include <cstdint>
 #include <fstream>
+#include <map>
+#include <span>
 #include <vector>
 
 #ifdef _WIN32
@@ -29,8 +31,8 @@ struct FolderAllocationEntry
 
   union
   {
-    uint8_t parentFolderIndex; // i have no idea what this is for
-    uint16_t totalEntries;     // only applicable for root folder
+    uint8_t parentFolderIndex;
+    uint16_t totalEntries; // only applicable for root folder
   };
 }; // size: 8 bytes
 
@@ -38,23 +40,69 @@ struct FolderAllocationEntry
 #pragma pack(pop)
 #endif
 
+class AbstractFSEntry
+{
+public:
+  AbstractFSEntry (const std::string &name, bool isDirectory) noexcept;
+  virtual ~AbstractFSEntry () = default;
+
+  bool isDirectory () const noexcept;
+  const std::string &getName () const noexcept;
+
+protected:
+  const std::string _name;
+  const bool _isDirectory;
+};
+
+class FileEntry : public AbstractFSEntry
+{
+public:
+  FileEntry (const std::string &name) noexcept;
+  FileEntry (const std::string &name, std::span<const uint8_t> data) noexcept;
+
+  std::span<const uint8_t> getData () const noexcept;
+  void setData (std::span<const uint8_t> data) noexcept;
+
+private:
+  std::vector<uint8_t> _data;
+};
+
+class DirectoryEntry : public AbstractFSEntry
+{
+public:
+  DirectoryEntry (const std::string &name, uint16_t folderRef) noexcept;
+
+  bool addEntry (const AbstractFSEntry &child) noexcept;
+  const std::unique_ptr<AbstractFSEntry> &
+  getEntry (std::string &name) const noexcept;
+  const uint16_t getFolderReference ();
+
+protected:
+  std::map<const std::string, const std::unique_ptr<AbstractFSEntry>>
+      _children;
+
+private:
+  uint16_t _folderRef;
+};
+
 struct FileNameListEntry
 {
-  bool isFolder;
+  bool isDirectory;
   std::string name;
   uint16_t folderReference; // value only used if folder
 };
 
-class FileNameTable
+class NitroFS : public DirectoryEntry
 {
 public:
-  FileNameTable ();
-  FileNameTable (std::ifstream &file, addr32_t tableOffset);
+  NitroFS ();
+  NitroFS (std::ifstream &file, addr32_t tableOffset);
 
-  FileNameTable &operator= (const FileNameTable &other) = default;
+  void readFrom (std::ifstream &file, addr32_t tableOffset);
 
 private:
-  std::vector<FolderAllocationEntry> _folders;
+  std::map<std::string, AbstractFSEntry> _root;
+  std::vector<FolderAllocationEntry> _folderAllocationEntries;
 };
 
 #endif

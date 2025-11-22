@@ -92,7 +92,7 @@ class GameROM
 public:
   GameROM (const std::string filePath);
 
-  FileNameTable getFileNameTable ();
+  NitroFS getFileNameTable ();
 
   std::span<ROMOverlayEntry> getArm9Overlays ();
   std::span<ROMOverlayEntry> getArm7Overlays ();
@@ -100,7 +100,7 @@ public:
 private:
   std::ifstream _rom;
   std::unique_ptr<ROMMainHeader> _mainHeader;
-  FileNameTable _fnt;
+  NitroFS _fnt;
   std::span<ROMOverlayEntry> _arm9Overlays;
   std::span<ROMOverlayEntry> _arm7Overlays;
 };

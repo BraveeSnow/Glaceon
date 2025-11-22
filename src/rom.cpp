@@ -54,8 +54,8 @@ GameROM::GameROM (const std::string filePath)
       throw std::exception ();
     }
 
-  _mainHeader   = readMainHeader (_rom);
-  _fnt          = FileNameTable (_rom, _mainHeader->fntOffset);
+  _mainHeader = readMainHeader (_rom);
+  _fnt.readFrom (_rom, _mainHeader->fntOffset);
   _arm9Overlays = readOverlayEntries (_rom, _mainHeader->arm9OverlayOffset,
                                       _mainHeader->arm9OverlaySize);
   _arm7Overlays = readOverlayEntries (_rom, _mainHeader->arm7OverlayOffset,

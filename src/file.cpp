@@ -4,6 +4,9 @@
 
 #include <spdlog/spdlog.h>
 
+#define FNT_FOLDER_MASK 0b10000000
+#define FNT_NAME_LENGTH 0b01111111
+
 namespace
 {
 
@@ -35,35 +38,30 @@ parseFolderTable (std::ifstream &file, addr32_t tableOffset)
 }
 
 std::vector<FileNameListEntry>
-parseRootFolderList (std::ifstream &file, addr32_t tableOffset,
-                     const FolderAllocationEntry &rootEntry)
+readFolderNameList (std::ifstream &file, addr32_t tableOffset,
+                    const FolderAllocationEntry &folderEntry)
 {
   std::vector<FileNameListEntry> entries;
   FileNameListEntry currentEntry;
   uint8_t metadata;
-  char buf[0b1111111];
+  char buf[FNT_NAME_LENGTH];
 
-  file.seekg (tableOffset + rootEntry.contentsOffset, std::ios::beg);
+  file.seekg (tableOffset + folderEntry.contentsOffset, std::ios::beg);
 
-  for (int i = 0; i < rootEntry.totalEntries; i++)
+  do
     {
-      // contains name size and isFolder bit
-      file.read (reinterpret_cast<char *> (&metadata), sizeof (uint8_t));
-      currentEntry.isFolder = (metadata & 0b10000000) != 0;
-      file.read (buf, metadata & 0b01111111);
-      currentEntry.name = std::string (buf, metadata & 0b01111111);
+      metadata                 = file.get ();
+      currentEntry.isDirectory = (metadata & FNT_FOLDER_MASK) != 0;
+      file.read (buf, metadata & FNT_NAME_LENGTH);
+      currentEntry.name = std::string (buf, metadata & FNT_NAME_LENGTH);
 
-      // random zero byte padding? skip for now
-      if (currentEntry.name.size () == 0)
-        {
-          continue;
-        }
-
-      // 16 bit value specific to folders only
-      if (currentEntry.isFolder)
+      if (currentEntry.isDirectory)
         {
           file.read (reinterpret_cast<char *> (&currentEntry.folderReference),
                      sizeof (uint16_t));
+          currentEntry.folderReference
+              -= 0xF000; // folder index from allocation table can be found by
+                         // subtracting 0xF000
         }
       else
         {
@@ -72,17 +70,130 @@ parseRootFolderList (std::ifstream &file, addr32_t tableOffset,
 
       entries.push_back (currentEntry);
     }
+  while (file.peek () != 0); // list terminates at zero byte
+
+  return entries;
+}
+
+std::map<std::string, AbstractFSEntry>
+mapFolderContents (const FolderAllocationEntry &folder,
+                   const std::vector<FileNameListEntry> &nameList)
+{
+  std::map<std::string, AbstractFSEntry> entries;
+
+  for (const FileNameListEntry &entry : nameList)
+    {
+      if (entry.isDirectory)
+        {
+          entries.try_emplace (
+              entry.name, DirectoryEntry (entry.name, entry.folderReference));
+        }
+      else
+        {
+          entries.emplace (entry.name, FileEntry (entry.name));
+        }
+    }
 
   return entries;
 }
 
 } // end namespace
 
-FileNameTable::FileNameTable () : _folders () {}
+/*****************************************************************************
+ * ABSTRACT NITROFS ENTRY DEFINITIONS                                        *
+ *****************************************************************************/
 
-FileNameTable::FileNameTable (std::ifstream &file, addr32_t tableOffset)
-    : _folders (parseFolderTable (file, tableOffset))
+AbstractFSEntry::AbstractFSEntry (const std::string &name,
+                                  bool isDirectory) noexcept
+    : _name (name), _isDirectory (isDirectory)
 {
-  std::vector<FileNameListEntry> rootEntries
-      = parseRootFolderList (file, tableOffset, _folders[0]);
+}
+
+bool
+AbstractFSEntry::isDirectory () const noexcept
+{
+  return _isDirectory;
+}
+
+const std::string &
+AbstractFSEntry::getName () const noexcept
+{
+  return _name;
+}
+
+/*****************************************************************************
+ * NITROFS FILE ENTRY CLASS DEFINITIONS                                      *
+ *****************************************************************************/
+
+FileEntry::FileEntry (const std::string &name) noexcept : FileEntry (name, {})
+{
+}
+
+FileEntry::FileEntry (const std::string &name,
+                      std::span<const uint8_t> data) noexcept
+    : AbstractFSEntry (name, false), _data (data.begin (), data.end ())
+{
+}
+
+std::span<const uint8_t>
+FileEntry::getData () const noexcept
+{
+  return std::span<const uint8_t> (_data);
+}
+
+void
+FileEntry::setData (std::span<const uint8_t> data) noexcept
+{
+  _data = std::vector<uint8_t> (data.begin (), data.end ());
+}
+
+/*****************************************************************************
+ * NITROFS DIRECTORY ENTRY CLASS DEFINITIONS                                 *
+ *****************************************************************************/
+
+DirectoryEntry::DirectoryEntry (const std::string &name,
+                                uint16_t folderRef) noexcept
+    : AbstractFSEntry (name, true), _children (), _folderRef (folderRef)
+{
+}
+
+bool
+DirectoryEntry::addEntry (const AbstractFSEntry &child) noexcept
+{
+  auto [_, emplaced] = _children.try_emplace (
+      child.getName (), std::make_unique<AbstractFSEntry> (child));
+  return emplaced;
+}
+
+const std::unique_ptr<AbstractFSEntry> &
+DirectoryEntry::getEntry (std::string &name) const noexcept
+{
+  return _children.at (name);
+}
+
+/*****************************************************************************
+ * NITROFS FILESYSTEM MANAGEMENT                                             *
+ *****************************************************************************/
+
+NitroFS::NitroFS () : DirectoryEntry ("/", 0), _root () {}
+
+NitroFS::NitroFS (std::ifstream &file, addr32_t tableOffset)
+    : DirectoryEntry ("/", 0)
+{
+  readFrom (file, tableOffset);
+}
+
+void
+NitroFS::readFrom (std::ifstream &file, addr32_t tableOffset)
+{
+  std::vector<FileNameListEntry> names;
+
+  _folderAllocationEntries = parseFolderTable (file, tableOffset);
+
+  for (const FolderAllocationEntry &folder : _folderAllocationEntries)
+    {
+      // TODO: implement recursive folder reading
+      names = readFolderNameList (file, tableOffset, folder);
+      mapFolderContents (folder, names);
+    }
 }
